@@ -312,45 +312,58 @@ export default function SessionPage() {
   }, [input, loading, dbSessionId, lang, character, messages, weaknessList]);
 
   // 音声入力（Web Speech API / Safari: webkitSpeechRecognition）
+  // continuous: true で長文対応。⏹ タップで停止→入力欄にセット→送信ボタンで送る
+  const finalTranscriptRef = useRef('');
+
   function toggleRecording() {
     if (isRecording) {
+      // 停止：認識を終わらせる（onend で isRecording を false にする）
       recognitionRef.current?.stop();
-      setIsRecording(false);
       return;
     }
 
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-
     if (!SpeechRecognitionAPI) return;
+
+    // 録音開始時に前回の内容をクリア
+    finalTranscriptRef.current = '';
+    setInput('');
 
     const recognition = new SpeechRecognitionAPI();
     recognition.lang = speechLang;
-    recognition.continuous = false;
-    recognition.interimResults = true;
+    recognition.continuous = true;       // ← 長文対応：無音でも止まらない
+    recognition.interimResults = true;   // ← リアルタイムで途中経過を表示
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => setIsRecording(true);
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const result = event.results[event.results.length - 1];
-      const transcript = result[0].transcript;
-      const isFinal = result.isFinal;
-      // 途中経過・確定ともに入力欄に表示（自動送信しない）
-      setInput(transcript);
-      if (isFinal) {
-        setIsRecording(false);
-        recognitionRef.current = null;
-        // 入力欄にセットするだけ。送信はユーザーが「送信」ボタンを押す
+      let interim = '';
+      // resultIndex から最新分だけ処理（重複防止）
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscriptRef.current += t;
+        } else {
+          interim += t;
+        }
       }
+      // 確定済み + 認識中のテキストを入力欄に表示
+      setInput(finalTranscriptRef.current + interim);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error('Speech recognition error:', event.error);
+      // 'no-speech' は無音タイムアウトで頻発するので無視
+      if (event.error !== 'no-speech') {
+        console.error('Speech recognition error:', event.error);
+      }
       setIsRecording(false);
       recognitionRef.current = null;
     };
 
     recognition.onend = () => {
+      // 停止時：確定済みテキストを入力欄に残す（送信はユーザーが行う）
+      setInput(finalTranscriptRef.current || '');
       setIsRecording(false);
       recognitionRef.current = null;
     };
@@ -481,7 +494,7 @@ export default function SessionPage() {
           }}
           placeholder={
             isRecording
-              ? '🎤 話してください… （止まると自動確定）'
+              ? '🎤 話してください… ⏹ で停止→送信'
               : lang === 'spanish' ? '¿Qué quieres decir?' : 'Cosa vuoi dire?'
           }
           readOnly={isRecording}
