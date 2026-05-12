@@ -335,12 +335,12 @@ export default function SessionPage() {
       const result = event.results[event.results.length - 1];
       const transcript = result[0].transcript;
       const isFinal = result.isFinal;
+      // 途中経過・確定ともに入力欄に表示（自動送信しない）
       setInput(transcript);
       if (isFinal) {
         setIsRecording(false);
         recognitionRef.current = null;
-        // 確定テキストを自動送信
-        sendMessage(transcript);
+        // 入力欄にセットするだけ。送信はユーザーが「送信」ボタンを押す
       }
     };
 
@@ -459,13 +459,12 @@ export default function SessionPage() {
         {speechSupported && (
           <button
             onClick={toggleRecording}
-            disabled={loading}
-            title={isRecording ? '録音停止' : '音声入力（スペイン語/イタリア語）'}
+            title={isRecording ? '録音停止（タップで確定）' : '音声入力（スペイン語/イタリア語）'}
             className={`rounded-xl flex items-center justify-center transition touch-manipulation shrink-0 ${
               isRecording
                 ? 'bg-red-500 text-white animate-pulse'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300'
-            } disabled:opacity-40`}
+            }`}
             style={{ minWidth: 52, minHeight: 52 }}
           >
             <span className="text-2xl">{isRecording ? '⏹' : '🎤'}</span>
@@ -482,7 +481,7 @@ export default function SessionPage() {
           }}
           placeholder={
             isRecording
-              ? '🎤 聞いています…'
+              ? '🎤 話してください… （止まると自動確定）'
               : lang === 'spanish' ? '¿Qué quieres decir?' : 'Cosa vuoi dire?'
           }
           readOnly={isRecording}
