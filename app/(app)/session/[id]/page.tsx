@@ -190,6 +190,7 @@ export default function SessionPage() {
 
   const { startSession, saveMessage, endSession } = useSession();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const langLabel = lang === 'spanish' ? '🇪🇸 スペイン語' : '🇮🇹 イタリア語';
   const langColor = lang === 'spanish' ? 'bg-red-600'    : 'bg-green-700';
@@ -273,6 +274,10 @@ export default function SessionPage() {
     if (!userText || loading) return;
     setMessages(prev => [...prev, { role: 'user', content: userText }]);
     setInput('');
+    // textareaの高さを1行分にリセット
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     setLoading(true);
 
     if (dbSessionId) await saveMessage(dbSessionId, 'user', userText);
@@ -362,8 +367,8 @@ export default function SessionPage() {
     };
 
     recognition.onend = () => {
-      // 停止時：確定済みテキストを入力欄に残す（送信はユーザーが行う）
-      setInput(finalTranscriptRef.current || '');
+      // ※ setInput はここでは呼ばない
+      // onresult で既にセット済み。ここで呼ぶと送信後クリアが上書きされるバグになる
       setIsRecording(false);
       recognitionRef.current = null;
     };
@@ -484,13 +489,22 @@ export default function SessionPage() {
           </button>
         )}
 
-        {/* テキスト入力欄 */}
-        <input
-          type="text"
+        {/* テキスト入力欄（自動伸縮textarea） */}
+        <textarea
+          ref={textareaRef}
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={e => {
+            setInput(e.target.value);
+            // 高さを内容に合わせて自動調整
+            e.target.style.height = 'auto';
+            e.target.style.height = `${e.target.scrollHeight}px`;
+          }}
           onKeyDown={e => {
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendMessage();
+            // Shift+Enter で改行、Enter単体で送信（PC向け）
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              sendMessage();
+            }
           }}
           placeholder={
             isRecording
@@ -498,8 +512,9 @@ export default function SessionPage() {
               : lang === 'spanish' ? '¿Qué quieres decir?' : 'Cosa vuoi dire?'
           }
           readOnly={isRecording}
-          className="flex-1 border rounded-xl px-4 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-          style={{ minHeight: 52 }}
+          rows={1}
+          className="flex-1 border rounded-xl px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none overflow-hidden leading-relaxed"
+          style={{ minHeight: 52, maxHeight: 160 }}
         />
 
         {/* 送信ボタン */}
