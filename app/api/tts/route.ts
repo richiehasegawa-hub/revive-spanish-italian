@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// キャラクターごとのElevenLabs voice_id
-// 取得方法: https://api.elevenlabs.io/v1/voices でリスト確認
+// キャラクターごとのElevenLabs voice_id（eleven_multilingual_v2 対応の確認済みID）
 const VOICE_IDS: Record<string, string> = {
-  carlos: 'pNInz6obpgDQGcFmaJgB', // Adam（男性・英語）→ 後でスペイン語ネイティブに変更
-  elena:  'EXAVITQu4vr4xnSDxMaL', // Bella（女性・英語）→ 後でスペイン語ネイティブに変更
-  marco:  'VR6AewLTigWG4xSOukaG', // Arnold（男性）→ 後でイタリア語ネイティブに変更
-  sofia:  'ThT5KcBeYPX3keUQqHPh', // Dorothy（女性）→ 後でイタリア語ネイティブに変更
+  carlos: 'pNInz6obpgDQGcFmaJgB', // Adam（男性）
+  elena:  'EXAVITQu4vr4xnSDxMaL', // Sarah（女性）
+  marco:  'TxGEqnHWrfWFTfGW9XjX', // Josh（男性）← Arnoldから変更
+  sofia:  '21m00Tcm4TlvDq8ikWAM', // Rachel（女性）← Dorothyから変更（無効IDのため）
 };
 
 // キャラクター別の言語設定
